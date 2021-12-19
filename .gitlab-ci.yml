@@ -1,0 +1,43 @@
+stages: 
+  
+  - build
+  - deploy
+variables:
+  IMAGE_NAME: $AWS_ECR_ACCOUNT.dkr.ecr.us-east-2.amazonaws.com/my-ecr-repo:${CI_COMMIT_REF_SLUG}
+  DOCKER_REGISTRY: 101311068349.dkr.ecr.us-east-2.amazonaws.com
+  AWS_DEFAULT_REGION: us-east-2
+  REPOSITORY_NAME: my-ecr-repo
+  DOCKER_HOST: tcp://docker:2375
+
+build:
+  stage: build
+  image: 
+    name: amazon/aws-cli
+    entrypoint: [""]
+  services:
+    - docker:dind
+  before_script:
+    - amazon-linux-extras install docker
+    - aws --version
+    - docker --version
+  script:
+    - docker build -t $DOCKER_REGISTRY/$REPOSITORY_NAME:$CI_PIPELINE_IID . 
+    - aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+    - docker push $DOCKER_REGISTRY/$REPOSITORY_NAME:$CI_PIPELINE_IID
+deploy:
+  stage: deploy
+  image: 
+    name : alpine/helm
+    entrypoint: [""]
+  script: 
+  - |
+    # install AWS CLI
+    apk add --no-cache python3 py3-pip \
+      && pip3 install --upgrade pip \
+      && pip3 install awscli \
+      && rm -rf /var/cache/apk/*
+    # add EKS cluster
+    aws eks --region us-east-2 update-kubeconfig --name mycluster
+    # deploy new release
+    helm dependency update ./helm
+    helm upgrade --install my-ecr-repo  ./helm --wait

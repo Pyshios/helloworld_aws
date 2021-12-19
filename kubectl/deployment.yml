@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: myapp-cluster
+    app.kubernetes.io/instance: myapp-cluster-instance
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: kubectl
+  name: myapp-cluster-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp-cluster
+  template:
+    metadata:
+      labels:
+        app: myapp-cluster
+    spec:
+      containers:
+        - image: 101311068349.dkr.ecr.us-east-2.amazonaws.com/my-ecr-repo:latest
+          imagePullPolicy: Always
+          name: myapp-cluster
+          ports:
+            - containerPort: 3000
